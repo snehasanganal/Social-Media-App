@@ -17,7 +17,7 @@ class Profile(models.Model):
         return self.user.username
     
 class Post(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    """id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.CharField(max_length=100)
     image = models.ImageField(upload_to = 'post_images')
     caption = models.TextField()
@@ -25,7 +25,18 @@ class Post(models.Model):
     no_of_likes = models.IntegerField(default=0)
 
     def __str__(self):
+        return self.user"""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    user = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='post_images', blank=True, null=True)  # Image is now optional
+    caption = models.TextField(blank=True, null=True)  # Caption is now optional
+    created_at = models.DateTimeField(default=datetime.now)
+    no_of_likes = models.IntegerField(default=0)
+
+    def __str__(self):
         return self.user
+
     
 class LikePost(models.Model):
     post_id = models.CharField(max_length=500)

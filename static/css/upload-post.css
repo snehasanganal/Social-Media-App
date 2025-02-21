@@ -1,0 +1,60 @@
+.post-upload-form {
+    background: #fff;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.upload-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#image-upload {
+    margin-bottom: 10px;
+}
+
+#image-preview-container {
+    position: relative;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+}
+
+#image-preview {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+
+.remove-img-btn {
+    background: red;
+    color: white;
+    border: none;
+    padding: 5px;
+    margin-left: 10px;
+    cursor: pointer;
+}
+
+.post-caption {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    resize: none;
+}
+
+.post-submit-btn {
+    background: #007bff;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}

@@ -1,0 +1,172 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{% static 'assets/images/favicon.png' %}" rel="icon" type="image/png">
+    <title>Upload Post</title>
+    <link rel="stylesheet" href="{% static 'assets/css/icons.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/uikit.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/tailwind.css' %}">
+
+    <style>
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            
+        }
+
+        .modal-content {
+            background: white;
+            width: 50%;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .blurred {
+            filter: blur(5px);
+            pointer-events: none;
+        }
+
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        .nudge-text {
+            color: red;
+            font-weight: bold;
+        }
+        .error-text {
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+            margin-left: 100px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container m-auto" id="main-content">
+        <h1 class="text-2xl leading-none text-gray-900 tracking-tight mt-3">
+            <a href="/">Home</a> / Upload Post
+        </h1>
+        <br>
+        <hr>
+
+        <div class="grid lg:grid-cols-3 mt-12 gap-8">
+            <div>
+                <h3 class="text-xl mb-2"> Create a Post</h3>
+            </div>
+
+            <div class="bg-white rounded-md lg:shadow-lg shadow col-span-2">
+                <form id="upload-form" action="{% url 'upload_post' %}" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+                    {% csrf_token %}
+
+                    <div class="grid grid-cols-2 gap-3 lg:p-6 p-4">
+                        <div class="col-span-2">
+                            <label for="caption">Post</label>
+                            <textarea id="caption" name="caption" placeholder="Write something..." 
+                                class="shadow-none bg-gray-100 w-full p-2 rounded">{{ caption }}</textarea>
+                        </div> 
+
+                        <div class="col-span-2">
+                            <label for="image-upload">Upload Image (Optional)</label>
+                            <input type="file" id="image-upload" name="image_upload" accept="image/*" class="shadow-none bg-gray-100">
+                            {% if request.session.saved_image %}
+                                <p class="text-gray-600 mt-2">Using previously uploaded image: {{ request.session.saved_image }}</p>
+                                <input type="hidden" name="saved_image" value="{{ request.session.saved_image }}">
+                            {% endif %}
+                        </div>
+
+                    </div>
+                    <p id="error-message" class="error-text"></p>
+                    <div class="bg-gray-10 p-6 pt-0 flex justify-end space-x-3">
+                        <button class="p-2 px-4 rounded bg-gray-50 text-red-500">
+                            <a href="/">Cancel</a>
+                        </button>
+                        <button type="submit" class="button bg-blue-700" id="upload-btn">Upload</button>
+                    </div>
+                    
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Nudge Modal -->
+    <div id="nudge-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 class="text-red-600 text-lg font-bold">⚠️ Sensitive Content Detected!</h2>
+            <br><hr><br>
+            <p class="nudge-text">{{ nudge }}</p>
+            <br>
+            <div class="mt-4 flex justify-center space-x-3">
+                <button onclick="closeModal()" class="button bg-gray-300 px-4 py-2 rounded">Edit</button>
+                <button onclick="submitAnyway()" class="button bg-red-500 text-white px-4 py-2 rounded">Submit Anyway</button>
+            </div>
+            <!--<button onclick="submitAnyway()" class="upload-btn">Submit Anyway</button>
+            <button onclick="closeModal()" class="upload-btn" style="background-color: #ff9800;">Edit</button>-->
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const showNudge = "{{ show_nudge|default:'False' }}".trim();
+            if (showNudge === "True") {
+                document.getElementById("nudge-modal").style.display = "flex";
+                document.getElementById("main-content").classList.add("blurred");
+            } else {
+                document.getElementById("nudge-modal").style.display = "none";
+            }
+        };
+
+        function submitAnyway() {
+            const form = document.getElementById('upload-form');
+            const overrideInput = document.createElement('input');
+            overrideInput.type = 'hidden';
+            overrideInput.name = 'override';
+            overrideInput.value = 'true';
+            form.appendChild(overrideInput);
+            form.submit();
+        }
+
+        function closeModal() {
+            document.getElementById("nudge-modal").style.display = "none";
+            document.getElementById("main-content").classList.remove("blurred");
+        }
+        function validateForm() {
+            const caption = document.getElementById('caption').value.trim();
+            const image = document.getElementById('image-upload').files.length;
+            const errorMessage = document.getElementById('error-message');
+
+            if (!caption && !image) {
+                errorMessage.textContent = 'Please provide some text or upload an image.';
+                return false;
+            }
+
+            errorMessage.textContent = '';
+            return true;
+        }
+    </script>
+</body>
+</html>

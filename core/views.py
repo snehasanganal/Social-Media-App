@@ -1,13 +1,178 @@
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User,auth
 from django.contrib import messages
-from django.http import HttpResponse 
+from django.http import HttpResponse, JsonResponse 
 from django.contrib.auth.decorators import login_required
 from .models import Profile,Post,LikePost,FollowersCount
 from itertools import chain
 import random
+import os
+import torch
+from django.shortcuts import render, redirect
+from transformers import BertTokenizer
+from .binary.init import PrivacyBERTLSTM
+from .multiclass.init import PrivacyBERTLSTM_MultiClass
+
+#  Get the base directory of the Django project
+#  Define the model directory path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_DIR = os.path.join(BASE_DIR, 'core', 'ai_models')
+
+BINARY_MODEL_PATH = os.path.join(MODEL_DIR, "best_binary_lr_1e-05_batch_32_opt_Adam.pt")
+MULTICLASS_MODEL_PATH = os.path.join(MODEL_DIR, "best_multi_lr_1e-05_batch_16_opt_RMSprop.pt")
+
+#  Load Tokenizer
+TOKENIZER = "bert-base-cased"
+tokenizer = BertTokenizer.from_pretrained(TOKENIZER)
+
+#  Load Binary Model
+binary_model = PrivacyBERTLSTM(learning_rate=1e-5, batch_size=32, optimizer_choice="Adam")
+binary_model.load_state_dict(torch.load(BINARY_MODEL_PATH, map_location=torch.device("cpu")))
+binary_model.eval()
+
+#  Load Multiclass Model
+multiclass_model = PrivacyBERTLSTM_MultiClass(learning_rate=1e-5, batch_size=16, optimizer_choice="RMSprop")
+multiclass_model.load_state_dict(torch.load(MULTICLASS_MODEL_PATH, map_location=torch.device("cpu")))
+multiclass_model.eval()
+
+#  Define Labels
+binary_labels = ["Other", "Sensitive"]
+multiclass_labels = ["Health", "Politics", "Religion", "Sexuality","Location","Personal Information"]
+
+#  Function to Preprocess Text
+def preprocess_text(text):
+    tokens = tokenizer(text, padding="max_length", max_length=50, truncation=True, return_tensors="pt")
+    return tokens["input_ids"], tokens["attention_mask"]
+
+#  Function to Predict Sensitivity Using Hierarchical Model
+def predict_sensitivity(text):
+    input_ids, attention_mask = preprocess_text(text)
+
+    #  Step 1: Binary Classification
+    with torch.no_grad():
+        binary_output = binary_model(input_ids, attention_mask)
+        binary_pred = torch.argmax(binary_output, dim=1).item()
+
+    if binary_pred == 0:  # "Other" (Non-Sensitive)
+        return "Other"
+
+    #  Step 2: If Sensitive, Use Multiclass Model
+    with torch.no_grad():
+        multiclass_output = multiclass_model(input_ids, attention_mask)
+        multiclass_pred = torch.argmax(multiclass_output, dim=1).item()
+
+    return multiclass_labels[multiclass_pred]
 
 # Create your views here.
+@login_required(login_url='signin')
+def upload_page(request):
+    return render(request, 'upload.html')
+
+@login_required(login_url='signin')
+def upload_post(request):
+
+    """if request.method == 'POST':
+        user = request.user.username
+        image = request.FILES.get('image_upload')
+        caption = request.POST.get('caption', '').strip()
+
+        if not image and not caption:
+            return render(request, 'upload.html', {'error': 'You must provide either an image or a caption.'})
+
+        if request.POST.get("confirm") == "true":
+            Post.objects.create(user=user, image=image, caption=caption)
+            messages.success(request, "✅ Post uploaded successfully!")
+            return redirect('index')
+
+        sensitivity_result = predict_sensitivity(caption) if caption else "Other"
+
+        if sensitivity_result != "Other":
+            return render(request, 'upload.html', {
+                'nudge': f"⚠️ Your post may contain sensitive content related to {sensitivity_result}.",
+                'caption': caption,
+                'image': image
+            })
+
+        Post.objects.create(user=user, image=image, caption=caption)
+        messages.success(request, "✅ Post uploaded successfully!")
+        return redirect('index')
+
+    return redirect('upload_page')"""
+    """if request.method == 'POST':
+        user = request.user.username
+        image = request.FILES.get('image_upload')
+        caption = request.POST.get('caption', '').strip()
+
+        # Ensure at least an image or a caption is provided
+        if not image and not caption:
+            return render(request, 'upload.html', {
+                'error': 'You must provide either an image or a caption.'
+            })
+
+        # Check if user has confirmed submission
+        confirmed = request.POST.get("confirm", "false") == "true"
+
+        # ✅ Step 1: Run Privacy BERT-LSTM Hierarchical Model
+        sensitivity_result = "Other"
+        if caption:
+            sensitivity_result = predict_sensitivity(caption)
+
+        # ✅ Step 2: If sensitive and user has NOT confirmed, show nudge
+        if sensitivity_result != "Other" and not confirmed:
+            return render(request, 'upload.html', {
+                'nudge': f"⚠️ Your post might contain sensitive content related to {sensitivity_result}. Are you sure you want to upload?",
+                'sensitivity_result': sensitivity_result,
+                'caption': caption,
+                'image': image
+            })
+
+        # ✅ Step 3: Save the Post (ONLY if confirmed or not sensitive)
+        new_post = Post.objects.create(user=user, image=image, caption=caption)
+        new_post.save()
+        return redirect('/')
+
+    return redirect('/')"""
+    
+    if request.method == 'POST':
+        user = request.user.username
+        caption = request.POST.get('caption', '').strip()
+        override = request.POST.get("override", "false") == "true"
+
+        # ✅ Handling Image Upload
+        image = request.FILES.get("image_upload")
+        saved_image = request.POST.get("saved_image", "")
+
+        # ✅ Image Handling
+        if not image and saved_image:
+            image_path = saved_image  
+        elif image:
+            image_path = default_storage.save(f"post_images/{image.name}", ContentFile(image.read()))
+        else:
+            image_path = None
+
+        # ✅ Sensitivity Check
+        sensitivity_result = predict_sensitivity(caption) if caption else "Other"
+
+        # ✅ Nudge Logic
+        if sensitivity_result != "Other" and not override:
+            request.session["saved_image"] = image_path  # Store image path in session
+            return render(request, "upload.html", {
+                "nudge": f"⚠️ Your post might contain sensitive content related to {sensitivity_result}. Are you sure you want to upload?",
+                "caption": caption,
+                "show_nudge": True
+            })
+
+        # ✅ Save Post
+        new_post = Post.objects.create(user=user, caption=caption, image=image_path)
+        new_post.save()
+
+        request.session.pop("saved_image", None)  # Clear session data
+        return redirect("/")
+
+    return redirect("/")
+
 
 @login_required(login_url='signin')
 def index(request):
@@ -56,20 +221,6 @@ def index(request):
 
     return render(request, 'index.html', {'user_profile':user_profile, 'posts': feed_list, 'suggestions_username_profile_list':suggestions_username_profile_list[:4]})
 
-@login_required(login_url='signin')
-def upload(request):
-    
-    if request.method == 'POST':
-        user = request.user.username
-        image = request.FILES.get('image_upload')
-        caption = request.POST['caption']
-
-        new_post = Post.objects.create(user=user, image=image, caption=caption)
-        new_post.save()
-       
-        return redirect('/')
-    else: 
-        return redirect('/')
 
 @login_required(login_url='signin')
 def search(request):

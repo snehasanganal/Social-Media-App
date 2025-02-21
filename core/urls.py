@@ -4,7 +4,8 @@ from . import views
 urlpatterns=[
     path('',views.index,name='index'),
     path('settings',views.settings,name='settings'),
-    path('upload',views.upload,name='upload'),
+    path('upload/',views.upload_page,name='upload_page'),
+    path('upload_post/', views.upload_post, name="upload_post"),
     path('follow',views.follow,name='follow'),
     path('search',views.search,name='search'),
     path('profile/<str:pk>',views.profile,name='profile'),
