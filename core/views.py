@@ -12,7 +12,7 @@ import os
 import torch
 from django.shortcuts import render, redirect
 from transformers import BertTokenizer
-from .binary.init import PrivacyBERTLSTM
+from .binary.init import PrivacyBERTLSTM, extract_entities
 from .multiclass.init import PrivacyBERTLSTM_MultiClass
 
 #  Get the base directory of the Django project
@@ -20,7 +20,7 @@ from .multiclass.init import PrivacyBERTLSTM_MultiClass
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, 'core', 'ai_models')
 
-BINARY_MODEL_PATH = os.path.join(MODEL_DIR, "best_binary_lr_1e-05_batch_32_opt_Adam.pt")
+BINARY_MODEL_PATH = os.path.join(MODEL_DIR, "best_binary_lr_1e-05_batch_32_opt_AdamW.pt")
 MULTICLASS_MODEL_PATH = os.path.join(MODEL_DIR, "best_multi_lr_1e-05_batch_16_opt_RMSprop.pt")
 
 #  Load Tokenizer
@@ -42,17 +42,22 @@ binary_labels = ["Other", "Sensitive"]
 multiclass_labels = ["Health", "Politics", "Religion", "Sexuality","Location","Personal Information"]
 
 #  Function to Preprocess Text
+"""def preprocess_text(text):
+    tokens = tokenizer(text, padding="max_length", max_length=50, truncation=True, return_tensors="pt")
+    return tokens["input_ids"], tokens["attention_mask"]"""
+
 def preprocess_text(text):
     tokens = tokenizer(text, padding="max_length", max_length=50, truncation=True, return_tensors="pt")
-    return tokens["input_ids"], tokens["attention_mask"]
+    entity_flag = extract_entities(text)  # Get entity-aware feature
+    return tokens["input_ids"], tokens["attention_mask"], torch.tensor(entity_flag).float().unsqueeze(0)
 
 #  Function to Predict Sensitivity Using Hierarchical Model
 def predict_sensitivity(text):
-    input_ids, attention_mask = preprocess_text(text)
-
+    #input_ids, attention_mask = preprocess_text(text)
+    input_ids, attention_mask, entity_flags = preprocess_text(text)
     #  Step 1: Binary Classification
     with torch.no_grad():
-        binary_output = binary_model(input_ids, attention_mask)
+        binary_output = binary_model(input_ids, attention_mask,entity_flags)
         binary_pred = torch.argmax(binary_output, dim=1).item()
 
     if binary_pred == 0:  # "Other" (Non-Sensitive)
