@@ -70,6 +70,67 @@ def predict_sensitivity(text):
 
     return multiclass_labels[multiclass_pred]
 
+import re
+
+def mask_sensitive_info(text):
+    """Mask personal information in the input text."""
+
+    # Mask phone numbers (10 digits)
+    text = re.sub(r'\b\d{10}\b', '[PHONE]', text)
+
+    # Mask email addresses
+    text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL]', text)
+
+    # Mask credit/debit card numbers (16-digit format with/without spaces or hyphens)
+    text = re.sub(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b', '[CARD]', text)
+
+    # Mask bank account numbers (basic format 9-18 digits)
+    text = re.sub(r'\b\d{9,18}\b', '[BANK_ACC]', text)
+
+    # Mask passport numbers (alphanumeric with 8-9 chars)
+    text = re.sub(r'\b[A-Z0-9]{8,9}\b', '[PASSPORT]', text)
+
+    # Mask PAN card (10 alphanumeric characters, starting with 5 letters)
+    text = re.sub(r'\b[A-Z]{5}[0-9]{4}[A-Z]\b', '[PAN]', text)
+
+    # Mask Aadhaar number (12-digit pattern)
+    text = re.sub(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}\b', '[AADHAAR]', text)
+
+    # Mask IFSC codes (4 letters + 0 + 6 alphanumeric characters)
+    text = re.sub(r'\b[A-Z]{4}0[A-Z0-9]{6}\b', '[IFSC]', text)
+
+    # Mask SSN (Social Security Number, US format)
+    text = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN]', text)
+
+    # Mask DOB in different formats (DD/MM/YYYY, YYYY-MM-DD, 3rd March, 2007, etc.)
+    text = re.sub(r'\b\d{1,2}(st|nd|rd|th)?\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*\d{4}\b', '[DOB]', text)
+    text = re.sub(r'\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b', '[DOB]', text)
+    text = re.sub(r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b', '[DOB]', text)
+
+    # Handle phrases like "born in 2009" or "born on March 3, 2007"
+    text = re.sub(r'\bborn (on|in) (\d{4}|\d{1,2}(st|nd|rd|th)?\s*[A-Za-z]+\s*\d{4})\b', '[DOB]', text, flags=re.IGNORECASE)
+
+    # Mask age with different phrases and formats
+    text = re.sub(r'\b(?:[Ii] am|[Mm]y age is|[Aa]ge:?)\s?\d{1,3}\s?(years? old)?\b', '[AGE]', text)
+    text = re.sub(r'\b(?:aged|age of|[Aa]ge)\s?\d{1,3}\b', '[AGE]', text)
+    text = re.sub(r'\b\d{1,3}\s?(years? old)\b', '[AGE]', text)
+
+    # Handle new age variations like "turning 56 today", "will be 45 next year"
+    text = re.sub(r'\bturning\s\d{1,3}\s(today|this year|soon)\b', '[AGE]', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(?:will be|going to be|turns|turn)\s\d{1,3}\s(next year|tomorrow|soon)\b', '[AGE]', text, flags=re.IGNORECASE)
+
+    # Mask person names and locations (basic approach using word lists)
+    names_list = ["John", "Jane", "Michael", "Alice", "Robert", "Emily"]  # Add common names or use NLP
+    locations_list = ["New York", "London", "Paris", "Mumbai", "Sydney"]
+
+    for name in names_list:
+        text = re.sub(fr'\b{name}\b', '[NAME]', text, flags=re.IGNORECASE)
+
+    for location in locations_list:
+        text = re.sub(fr'\b{location}\b', '[LOCATION]', text, flags=re.IGNORECASE)
+
+    return text
+
 # Create your views here.
 @login_required(login_url='signin')
 def upload_page(request):
@@ -77,8 +138,47 @@ def upload_page(request):
 
 @login_required(login_url='signin')
 def upload_post(request):
+    
+    if request.method == 'POST':
+        user = request.user.username
+        caption = request.POST.get('caption', '').strip()
+        override = request.POST.get("override", "false") == "true"
+        
+        # ✅ Handling Image Upload
+        image = request.FILES.get("image_upload")
+        saved_image = request.POST.get("saved_image", "")
 
-    """if request.method == 'POST':
+        # ✅ Image Handling
+        if not image and saved_image:
+            image_path = saved_image  
+        elif image:
+            image_path = default_storage.save(f"post_images/{image.name}", ContentFile(image.read()))
+        else:
+            image_path = None
+
+        # ✅ Sensitivity Check
+        sensitivity_result = predict_sensitivity(caption) if caption else "Other"
+
+        # ✅ Nudge Logic
+        if sensitivity_result != "Other" and not override:
+            request.session["saved_image"] = image_path  # Store image path in session
+            return render(request, "upload.html", {
+                "nudge": f"{sensitivity_result}",
+                "caption": caption,
+                "show_nudge": True,
+                
+            })
+        
+        
+        # ✅ Save Post
+        new_post = Post.objects.create(user=user, caption=caption, image=image_path)
+        new_post.save()
+
+        request.session.pop("saved_image", None)  # Clear session data
+        return redirect("/")
+
+    return redirect("/")
+"""if request.method == 'POST':
         user = request.user.username
         image = request.FILES.get('image_upload')
         caption = request.POST.get('caption', '').strip()
@@ -105,7 +205,7 @@ def upload_post(request):
         return redirect('index')
 
     return redirect('upload_page')"""
-    """if request.method == 'POST':
+"""if request.method == 'POST':
         user = request.user.username
         image = request.FILES.get('image_upload')
         caption = request.POST.get('caption', '').strip()
@@ -139,45 +239,6 @@ def upload_post(request):
         return redirect('/')
 
     return redirect('/')"""
-    
-    if request.method == 'POST':
-        user = request.user.username
-        caption = request.POST.get('caption', '').strip()
-        override = request.POST.get("override", "false") == "true"
-
-        # ✅ Handling Image Upload
-        image = request.FILES.get("image_upload")
-        saved_image = request.POST.get("saved_image", "")
-
-        # ✅ Image Handling
-        if not image and saved_image:
-            image_path = saved_image  
-        elif image:
-            image_path = default_storage.save(f"post_images/{image.name}", ContentFile(image.read()))
-        else:
-            image_path = None
-
-        # ✅ Sensitivity Check
-        sensitivity_result = predict_sensitivity(caption) if caption else "Other"
-
-        # ✅ Nudge Logic
-        if sensitivity_result != "Other" and not override:
-            request.session["saved_image"] = image_path  # Store image path in session
-            return render(request, "upload.html", {
-                "nudge": f"⚠️ Your post might contain sensitive content related to {sensitivity_result}. Are you sure you want to upload?",
-                "caption": caption,
-                "show_nudge": True
-            })
-
-        # ✅ Save Post
-        new_post = Post.objects.create(user=user, caption=caption, image=image_path)
-        new_post.save()
-
-        request.session.pop("saved_image", None)  # Clear session data
-        return redirect("/")
-
-    return redirect("/")
-
 
 @login_required(login_url='signin')
 def index(request):

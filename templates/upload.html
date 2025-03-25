@@ -37,9 +37,18 @@
             box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .blurred {
+        /*.blurred {
             filter: blur(5px);
             pointer-events: none;
+        }*/
+        #nudge-modal {
+            display: none; /* Initially hidden */
+            margin-top: 10px; /* Adds space from the form */
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e53e3e; /* Red border */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Light shadow */
         }
 
         .upload-btn {
@@ -54,14 +63,20 @@
             background-color: #45a049;
         }
         .nudge-text {
-            color: red;
+            color: black;
             font-weight: bold;
+            text-align: center;
         }
         .error-text {
             color: red;
             font-weight: bold;
             margin-top: 10px;
             margin-left: 100px;
+        }
+        .alert{
+            color: red;
+            font-weight: bold;
+            text-align: center;
         }
     </style>
 </head>
@@ -82,7 +97,7 @@
             <div class="bg-white rounded-md lg:shadow-lg shadow col-span-2">
                 <form id="upload-form" action="{% url 'upload_post' %}" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
                     {% csrf_token %}
-
+                    
                     <div class="grid grid-cols-2 gap-3 lg:p-6 p-4">
                         <div class="col-span-2">
                             <label for="caption">Post</label>
@@ -90,70 +105,110 @@
                                 class="shadow-none bg-gray-100 w-full p-2 rounded">{{ caption }}</textarea>
                         </div> 
 
-                        <div class="col-span-2">
+                        <!--<div class="col-span-2">
                             <label for="image-upload">Upload Image (Optional)</label>
                             <input type="file" id="image-upload" name="image_upload" accept="image/*" class="shadow-none bg-gray-100">
                             {% if request.session.saved_image %}
                                 <p class="text-gray-600 mt-2">Using previously uploaded image: {{ request.session.saved_image }}</p>
                                 <input type="hidden" name="saved_image" value="{{ request.session.saved_image }}">
                             {% endif %}
-                        </div>
+                        </div>-->
 
                     </div>
                     <p id="error-message" class="error-text"></p>
-                    <div class="bg-gray-10 p-6 pt-0 flex justify-end space-x-3">
+                    <!--<div class="bg-gray-10 p-6 pt-0 flex justify-end space-x-3">
                         <button class="p-2 px-4 rounded bg-gray-50 text-red-500">
                             <a href="/">Cancel</a>
                         </button>
                         <button type="submit" class="button bg-blue-700" id="upload-btn">Upload</button>
-                    </div>
+                    </div>-->
                     
+                    <div id="buttons-container" class="bg-gray-10 p-6 pt-0 flex justify-end space-x-3">
+                        <button type="button" id="cancel-btn" class="p-2 px-4 rounded bg-gray-50 text-red-500">Cancel</button>
+                        <button type="submit" id="upload-btn" class="button bg-blue-700">Upload</button>
+                    </div>
+                
+                    <!-- ✅ Nudge Modal Below the Form -->
+                    {% if show_nudge %}
+                    <div id="nudge-modal" class="mt-4 p-4 bg-red-100 border border-red-500 rounded-md">
+                        <span><h2 class="alert">⚠️⚠️⚠️⚠️Sensitive Content Detected!⚠️⚠️⚠️⚠️</h2><hr>
+                        <p class="nudge-text"> Your post might contain sensitive content related to <span class=alert>{{nudge}}</span>. Are you sure you want to upload?</p>
+                        <div class="mt-4 flex justify-center space-x-3">
+                            <button type="button" id="edit-btn" class="p-2 px-4 rounded bg-gray-50 text-red-500">Edit</button>
+                            <button type="button" id="submit-anyway-btn" class="button bg-blue-700">Submit Anyway</button>
+                        </div></span>
+                    </div>
+                    {% endif %}
                 </form>
             </div>
         </div>
     </div>
 
     <!-- ✅ Nudge Modal -->
-    <div id="nudge-modal" class="modal-overlay">
+    <!--<div id="nudge-modal" class="modal-overlay"{% if show_nudge %}style="display: flex;"{% endif %}>
         <div class="modal-content">
-            <h2 class="text-red-600 text-lg font-bold">⚠️ Sensitive Content Detected!</h2>
+            <h2 class="text-red-600 text-lg font-bold">⚠️⚠️⚠️⚠️Sensitive Content Detected!⚠️⚠️⚠️⚠️</h2>
             <br><hr><br>
-            <p class="nudge-text">{{ nudge }}</p>
+            <p class="nudge-text">Your post might contain sensitive content related to <span class=alert>{{nudge}}</span>. Are you sure you want to upload?</p>
             <br>
             <div class="mt-4 flex justify-center space-x-3">
                 <button onclick="closeModal()" class="button bg-gray-300 px-4 py-2 rounded">Edit</button>
                 <button onclick="submitAnyway()" class="button bg-red-500 text-white px-4 py-2 rounded">Submit Anyway</button>
             </div>
-            <!--<button onclick="submitAnyway()" class="upload-btn">Submit Anyway</button>
-            <button onclick="closeModal()" class="upload-btn" style="background-color: #ff9800;">Edit</button>-->
         </div>
-    </div>
+    </div>-->
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const nudgeModal = document.getElementById("nudge-modal");
+            const buttonsContainer = document.getElementById("buttons-container");
+            const editBtn = document.getElementById("edit-btn");
+            const submitAnywayBtn = document.getElementById("submit-anyway-btn");
+            const uploadForm = document.getElementById("uploadForm");
+
+            if (nudgeModal) {
+                // Hide Upload & Cancel buttons if nudge is shown
+                buttonsContainer.style.display = "none";
+
+                // "Edit" Button: Hide Nudge & Show Upload Buttons
+                editBtn.addEventListener("click", function() {
+                    nudgeModal.style.display = "none";
+                    buttonsContainer.style.display = "flex";
+                });
+
+                // "Submit Anyway" Button: Add Hidden Input & Submit Form
+                submitAnywayBtn.addEventListener("click", function() {
+                    const form = document.getElementById('upload-form');
+                    const overrideInput = document.createElement('input');
+                    overrideInput.type = 'hidden';
+                    overrideInput.name = 'override';
+                    overrideInput.value = 'true';
+                    form.appendChild(overrideInput);
+                    form.submit();
+                });
+            }
+        });
         window.onload = function() {
             const showNudge = "{{ show_nudge|default:'False' }}".trim();
             if (showNudge === "True") {
                 document.getElementById("nudge-modal").style.display = "flex";
-                document.getElementById("main-content").classList.add("blurred");
+                /*document.getElementById("main-content").classList.add("blurred");*/
             } else {
                 document.getElementById("nudge-modal").style.display = "none";
             }
         };
+        document.getElementById("uploadForm").addEventListener("submit", function (event) {
+            event.preventDefault(); // Prevent default submission
 
-        function submitAnyway() {
-            const form = document.getElementById('upload-form');
-            const overrideInput = document.createElement('input');
-            overrideInput.type = 'hidden';
-            overrideInput.name = 'override';
-            overrideInput.value = 'true';
-            form.appendChild(overrideInput);
-            form.submit();
-        }
+            let isSensitive = true; // Replace with actual sensitive detection logic
 
-        function closeModal() {
-            document.getElementById("nudge-modal").style.display = "none";
-            document.getElementById("main-content").classList.remove("blurred");
-        }
+            if (isSensitive) {
+                document.getElementById("nudge-modal").style.display = "block";
+            } else {
+                this.submit(); // Normal submit if no sensitive content
+            }
+        });
+        
         function validateForm() {
             const caption = document.getElementById('caption').value.trim();
             const image = document.getElementById('image-upload').files.length;
@@ -166,6 +221,22 @@
 
             errorMessage.textContent = '';
             return true;
+        }
+
+        
+       function submitAnyway() {
+            const form = document.getElementById('upload-form');
+            const overrideInput = document.createElement('input');
+            overrideInput.type = 'hidden';
+            overrideInput.name = 'override';
+            overrideInput.value = 'true';
+            form.appendChild(overrideInput);
+            form.submit();
+        }
+
+        function closeModal() {
+            document.getElementById("nudge-modal").style.display = "none";
+            /*document.getElementById("main-content").classList.remove("blurred");*/
         }
     </script>
 </body>
