@@ -143,6 +143,49 @@ def upload_post(request):
         user = request.user.username
         caption = request.POST.get('caption', '').strip()
         override = request.POST.get("override", "false") == "true"
+        mask_info = request.POST.get("mask_info", "false") == "true"
+        
+        # ✅ Handling Image Upload
+        image = request.FILES.get("image_upload")
+        saved_image = request.POST.get("saved_image", "")
+        
+        # ✅ Image Handling
+        if not image and saved_image:
+            image_path = saved_image  
+        elif image:
+            image_path = default_storage.save(f"post_images/{image.name}", ContentFile(image.read()))
+        else:
+            image_path = None
+        
+        # ✅ Sensitivity Check
+        sensitivity_result = predict_sensitivity(caption) if caption else "Other"
+        
+        # ✅ Nudge Logic
+        if sensitivity_result != "Other" and not override:
+            request.session["saved_image"] = image_path  # Store image path in session
+            return render(request, "upload.html", {
+                "nudge": f"{sensitivity_result}",
+                "caption": caption,
+                "show_nudge": True,
+            })
+        
+        # ✅ Masking Logic for Personal Information
+        if sensitivity_result == "Personal Information" and mask_info:
+            caption = mask_sensitive_info(caption)
+        
+        # ✅ Save Post
+        new_post = Post.objects.create(user=user, caption=caption, image=image_path)
+        new_post.save()
+        request.session.pop("saved_image", None)  # Clear session data
+        return redirect("/")
+    
+    return redirect("/")
+"""def upload_post(request):
+    
+    if request.method == 'POST':
+        user = request.user.username
+        caption = request.POST.get('caption', '').strip()
+        override = request.POST.get("override", "false") == "true"
         
         # ✅ Handling Image Upload
         image = request.FILES.get("image_upload")
@@ -177,68 +220,8 @@ def upload_post(request):
         request.session.pop("saved_image", None)  # Clear session data
         return redirect("/")
 
-    return redirect("/")
-"""if request.method == 'POST':
-        user = request.user.username
-        image = request.FILES.get('image_upload')
-        caption = request.POST.get('caption', '').strip()
+    return redirect("/")"""
 
-        if not image and not caption:
-            return render(request, 'upload.html', {'error': 'You must provide either an image or a caption.'})
-
-        if request.POST.get("confirm") == "true":
-            Post.objects.create(user=user, image=image, caption=caption)
-            messages.success(request, "✅ Post uploaded successfully!")
-            return redirect('index')
-
-        sensitivity_result = predict_sensitivity(caption) if caption else "Other"
-
-        if sensitivity_result != "Other":
-            return render(request, 'upload.html', {
-                'nudge': f"⚠️ Your post may contain sensitive content related to {sensitivity_result}.",
-                'caption': caption,
-                'image': image
-            })
-
-        Post.objects.create(user=user, image=image, caption=caption)
-        messages.success(request, "✅ Post uploaded successfully!")
-        return redirect('index')
-
-    return redirect('upload_page')"""
-"""if request.method == 'POST':
-        user = request.user.username
-        image = request.FILES.get('image_upload')
-        caption = request.POST.get('caption', '').strip()
-
-        # Ensure at least an image or a caption is provided
-        if not image and not caption:
-            return render(request, 'upload.html', {
-                'error': 'You must provide either an image or a caption.'
-            })
-
-        # Check if user has confirmed submission
-        confirmed = request.POST.get("confirm", "false") == "true"
-
-        # ✅ Step 1: Run Privacy BERT-LSTM Hierarchical Model
-        sensitivity_result = "Other"
-        if caption:
-            sensitivity_result = predict_sensitivity(caption)
-
-        # ✅ Step 2: If sensitive and user has NOT confirmed, show nudge
-        if sensitivity_result != "Other" and not confirmed:
-            return render(request, 'upload.html', {
-                'nudge': f"⚠️ Your post might contain sensitive content related to {sensitivity_result}. Are you sure you want to upload?",
-                'sensitivity_result': sensitivity_result,
-                'caption': caption,
-                'image': image
-            })
-
-        # ✅ Step 3: Save the Post (ONLY if confirmed or not sensitive)
-        new_post = Post.objects.create(user=user, image=image, caption=caption)
-        new_post.save()
-        return redirect('/')
-
-    return redirect('/')"""
 
 @login_required(login_url='signin')
 def index(request):
