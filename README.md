@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Social-Media-App
 This is a social media application built using Django framework with HTML,CSS,Javascript used for the front-end of the application.
 It includes features such as posting, liking posts, suggesting friends, following, updating profiles, downloading photoes, etc.<br><br>
@@ -9,6 +10,9 @@ https://github.com/snehasanganal/Social-Media-App/assets/116898126/32042118-25ed
 
 =======
 <b> Steps to run the project <\b>
+=======
+<b> Steps to run the project </b>
+>>>>>>> 40a17d9 (Update README.md)
 <b> 1. Creating a virtual Environment <\b>
 i. Create a folder named <b>"project-env"<\b> or any other.
 ii. Go to command prompt or vscode terminal and go inside the folder using <b>"cd project-env"<\b>
