@@ -36,7 +36,8 @@ iv. Now a new folder named venv will be created inside project-env.
 
 
 **2. Activating a virtual Environment**
-i. When you are in the project-env folder, type <b>venv\Scripts\activate<\b> (or myenv\Scripts\activate based on your virtual environment name)
+
+i. When you are in the project-env folder, type **venv\Scripts\activate** (or myenv\Scripts\activate based on your virtual environment name)
 
 
 
