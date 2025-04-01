@@ -45,7 +45,7 @@ i. When you are in the project-env folder, type **venv\Scripts\activate** (or my
 
 i. Create a folder named **"social_book"** inside the project-env folder
 
-ii. Now clone this repository using following command -- **git clone "https://github.com/snehasanganal/Final-Year-Project.git" social_book**
+ii. Now clone this repository using following command -- **"  git clone "https://github.com/snehasanganal/Final-Year-Project.git" social_book**  "
 
 iii. Now you need to install multiple packages to run the project successfully. Ensure that when installing packages your virtual environment is activated.Run the following commands:
 
