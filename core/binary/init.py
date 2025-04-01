@@ -13,8 +13,7 @@ from transformers import BertModel, BertTokenizer, AdamW
 import nltk
 from nltk.corpus import stopwords
 import requests
-# Load Named Entity Recognition (NER) model
-nltk.download('stopwords')
+
 
 # Load SpaCy's Named Entity Recognition (NER) model
 nlp = spacy.load("en_core_web_sm")
