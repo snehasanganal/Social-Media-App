@@ -61,7 +61,7 @@ iv. Now create a folder named ai_models inside "core" folder of the social_book 
 
 
 
-**3. Running the project**
+**4. Running the project**
 
 i. Enter the project folder by typing **"cd social_book"**
 
