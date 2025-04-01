@@ -55,7 +55,7 @@ iii. Now you need to install multiple packages to run the project successfully. 
  
 **"python -m nltk.downloader stopwords"**
 
-iv. Now create a folder named ai_models inside "core" folder of the social_book folder . Now move the saved models inside this <b>"ai_models"<\b> folder. The folder structure should be as below:
+iv. Now create a folder named ai_models inside "core" folder of the social_book folder . Now move the saved models inside this **"ai_models"** folder. The folder structure should be as below:
 
 ![image](https://github.com/user-attachments/assets/a050c0cf-919f-456d-afee-4509d76307bf)
 
