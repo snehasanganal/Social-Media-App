@@ -3,7 +3,7 @@
 This is a social media application built using Django framework with HTML,CSS,Javascript used for the front-end of the application.
 It includes features such as posting, liking posts, suggesting friends, following, updating profiles, downloading photoes, etc.<br><br>
 It comes along with a sensitive content detecting feature where-in the user is nudged with alerts whenever he/she tries to post anything sensitive like their personal information, political or religious opinions or about their health conditions or sexuality etc. This is aimed at safeguarding the user from possible problems to privacy and security that could arise due to posting such sensitive content on social media. <br><br>
-The model for the sensitive content detection is built using a combination of bert and lstm layers. A feature to mask personal information before posting is also provided to the user. 
+The model for the sensitive content detection is built using a combination of bert and lstm layers. A feature to mask personal information before posting is also provided to the user. <br><br>
 **Demo Video**
 
 
