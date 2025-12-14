@@ -5,7 +5,8 @@ It includes features such as posting, liking posts, suggesting friends, followin
 **Demo Video**
 
 
-https://github.com/snehasanganal/Social-Media-App/assets/116898126/32042118-25ed-4e1f-9834-3d9f99c73ecd
+https://github.com/user-attachments/assets/543102d7-2451-4958-8071-cc22a35dfda6
+
 
 
 **Steps to run the project**
